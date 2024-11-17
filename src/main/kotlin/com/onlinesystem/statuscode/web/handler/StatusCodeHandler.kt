@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
+import kotlin.jvm.optionals.getOrDefault
 
 @Component
 class StatusCodeHandler {
@@ -45,16 +46,16 @@ class StatusCodeHandler {
                 .queryParam("code")
                 .orElseThrow { InvalidRequestException("Query parameter 'code' is missing") }
                 .toIntOrNull() ?: throw IllegalArgumentException("Invalid 'code' parameter, must be and integer")
+            val status = serverRequest.queryParam("status").getOrDefault("Custom")
             val message = serverRequest
                 .queryParam("message")
                 .orElseThrow { InvalidRequestException("Query parameter 'message' is missing") }
 
-            return if (statusCode !in 100..599) {
-                ServerResponse.status(statusCode)
-                    .bodyValue(message)
-            } else {
-                HttpStatus.resolve(statusCode)?.let { ServerResponse.status(it).bodyValue(message) }!!
-            }
+            val statusMessage = HttpStatus.resolve(statusCode)?.reasonPhrase ?: status
+            val responseBody = mapOf("statusCode" to statusCode,
+                "statusMessage" to statusMessage,
+                "message" to message)
+            return ServerResponse.status(statusCode).bodyValue(responseBody)
 
         } catch (ex: InvalidRequestException) {
             return ServerResponse.badRequest().bodyValue(mapOf("error" to ex.message))
