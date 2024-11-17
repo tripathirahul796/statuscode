@@ -2,7 +2,8 @@
 FROM eclipse-temurin:21-jdk-alpine as build
 WORKDIR /app
 COPY . .
-RUN gradlew clean build -x test
+RUN chmod +x ./gradlew
+RUN ./gradlew clean build -x test
 
 # Stage 2: Run the application
 FROM openjdk:21-jdk-slim
